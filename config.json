@@ -1,0 +1,63 @@
+{
+  "sheetColumns": {
+    "name": "A",
+    "discordDisplayName": "B",
+    "discordUsername": "C",
+    "studentId": "D",
+    "gender": "E",
+    "team": "F",
+    "membershipFeeRecord": "G",
+    "grade": "H"
+  },
+  "permissions": {
+    "adminRoleIds": [
+      "882542389569396757"
+    ],
+    "memberRoleIds": [
+      "901075970574917632"
+    ],
+    "allowedChannelIds": []
+  },
+  "notifications": {
+    "feeReminder": {
+      "enabled": true,
+      "schedule": "0 9 1 * *",
+      "channelId": "1168376137337020437"
+    },
+    "voteReminder": {
+      "enabled": true,
+      "hoursBeforeDeadline": 24
+    },
+    "systemNotifications": {
+      "channelId": "1168376137337020437"
+    }
+  },
+  "sheets": {
+    "spreadsheetId": "1Q8_985uk5WqP1nXrJAb8f5otO1ctI_eczjtjoi6aY04",
+    "sheetName": "test_members"
+  },
+  "registration": {
+    "formUrl": "https://docs.google.com/forms/d/1dhF9G4FkY-nPkWqac9BIR4lgqXu71ZWgddJSFyH5tnc/edit",
+    "welcomeMessage": "ようこそ！以下のフォームから部員登録をお願いします。"
+  },
+  "database": {
+    "path": "./database/cac_bot.db",
+    "backupEnabled": true,
+    "backupSchedule": "0 3 * * *"
+  },
+  "api": {
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "rateLimit": {
+      "requests": 100,
+      "window": 60000
+    }
+  },
+  "logging": {
+    "level": "info",
+    "enableFileLogging": true,
+    "enableDiscordLogging": true,
+    "enableConsoleLogging": true,
+    "rotationSchedule": "0 0 * * 0"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "name": "cac-discord-bot",
+  "version": "1.0.0",
+  "description": "部活動管理BOT for Discord",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --max-old-space-size=8192 dist/index.js",
+    "dev": "nodemon --exec 'node --max-old-space-size=8192 -r ts-node/register' src/index.ts",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "test": "jest",
+    "deploy": "npm run build && npm start",
+    "deploy-commands": "npm run build && node dist/scripts/deploy-commands.js",
+    "deploy-commands:guild": "npm run build && node dist/scripts/deploy-commands.js --guild=",
+    "import-csv": "npm run build && node dist/scripts/import-csv-to-db.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "typescript",
+    "google-sheets",
+    "部活動管理"
+  ],
+  "author": "Claude",
+  "license": "MIT",
+  "dependencies": {
+    "cron": "^4.3.1",
+    "csv-parse": "^5.6.0",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "googleapis": "^134.0.0",
+    "module-alias": "^2.2.3",
+    "node-cron": "^3.0.3",
+    "sqlite3": "^5.1.6",
+    "tsconfig-paths": "^4.2.0",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.10.5",
+    "@types/node-cron": "^3.0.11",
+    "@types/sqlite3": "^3.1.11",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "ts-jest": "^29.3.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "_moduleAliases": {
+    "@": "dist"
+  }
+}

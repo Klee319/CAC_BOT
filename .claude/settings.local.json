@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(touch:*)",
+      "Bash(mv:*)",
+      "Bash(node:*)",
+      "Bash(git:*)",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(cat:*)",
+      "Bash(echo:*)",
+      "Bash(grep:*)",
+      "Bash(less:*)",
+      "Bash(tail:*)",
+      "Bash(head:*)",
+      "Bash(pwd:*)",
+      "Bash(pip:*)",
+      "Bash(python:*)",
+      "Bash(rm:*)",
+      "Bash(rg:*)",
+      "Bash(timeout 10s npm start)",
+      "Bash(timeout 15s npm start)",
+      "Bash(sqlite3:*)",
+      "Bash(timeout 8s npm start)",
+      "Bash(pkill:*)"
+    ],
+    "deny": []
+  }
+}
