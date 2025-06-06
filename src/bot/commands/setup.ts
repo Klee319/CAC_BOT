@@ -281,17 +281,11 @@ async function handleShow(interaction: ChatInputCommandInteraction) {
     inline: true,
   });
 
-  embed.addFields({
-    name: '📋 自動登録フォーム',
-    value: config.registration.formUrl ? '✅ 設定済み' : '❌ 未設定',
-    inline: true,
-  });
 
   embed.addFields({
     name: '🔔 通知設定',
     value: [
       `部費リマインド: ${config.notifications.feeReminder.enabled ? '✅' : '❌'}`,
-      `投票リマインド: ${config.notifications.voteReminder.enabled ? '✅' : '❌'}`,
     ].join('\n'),
     inline: false,
   });

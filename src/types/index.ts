@@ -42,34 +42,6 @@ export interface AuditLog {
   result: 'success' | 'failure';
 }
 
-export interface VoteCreationModal {
-  formUrl: string;
-  outputSheet?: string;
-  deadline: Date;
-  allowEdit: boolean;
-  anonymous: boolean;
-}
-
-export interface Vote {
-  id: string;
-  title: string;
-  description: string;
-  formUrl: string;
-  deadline: Date;
-  createdBy: string;
-  createdAt: Date;
-  isActive: boolean;
-  allowEdit: boolean;
-  anonymous: boolean;
-  responses: VoteResponse[];
-}
-
-export interface VoteResponse {
-  userId: string;
-  voteId: string;
-  responses: Record<string, any>;
-  submittedAt: Date;
-}
 
 export interface Permissions {
   adminRoleIds: string[];
@@ -95,10 +67,6 @@ export interface Config {
       schedule: string;
       channelId: string;
     };
-    voteReminder: {
-      enabled: boolean;
-      hoursBeforeDeadline: number;
-    };
     systemNotifications: {
       channelId: string;
     };
@@ -108,7 +76,6 @@ export interface Config {
     sheetName: string;
   };
   registration: {
-    formUrl: string;
     welcomeMessage: string;
   };
   database: {
@@ -158,25 +125,6 @@ export interface DatabaseSchema {
     created_at: string;
     updated_at: string;
   };
-  votes: {
-    id: string;
-    title: string;
-    description: string;
-    form_url: string;
-    deadline: string;
-    created_by: string;
-    created_at: string;
-    is_active: number;
-    allow_edit: number;
-    anonymous: number;
-  };
-  vote_responses: {
-    id: number;
-    vote_id: string;
-    user_id: string;
-    responses: string;
-    submitted_at: string;
-  };
   audit_logs: {
     id: number;
     timestamp: string;
@@ -199,7 +147,7 @@ export interface GoogleSheetsRow {
 }
 
 export interface NotificationPayload {
-  type: 'fee_reminder' | 'vote_reminder' | 'system' | 'custom';
+  type: 'fee_reminder' | 'system' | 'custom';
   recipient?: string;
   channelId?: string;
   title: string;

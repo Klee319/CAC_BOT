@@ -6,6 +6,7 @@ import { RegistrationService } from '../../services/registration';
 import { MemberValidator, MemberConverter, MemberFormatter } from '../../utils/memberUtils';
 import { logger } from '../../utils/logger';
 import { Member, MemberUpdate } from '../../types';
+import { syncService } from '../../services/sync';
 
 export default {
   data: new SlashCommandBuilder()
@@ -184,6 +185,12 @@ export default {
 async function handleList(interaction: ChatInputCommandInteraction, db: DatabaseService) {
   await interaction.deferReply();
   
+  // データ操作前の自動同期
+  const syncResult = await syncService.syncBeforeDataOperation();
+  if (!syncResult.success) {
+    logger.warn('同期に失敗しましたが、処理を続行します', { error: syncResult.message });
+  }
+  
   const members = await db.getAllMembers();
   
   if (members.length === 0) {
@@ -231,6 +238,12 @@ async function handleSearch(interaction: ChatInputCommandInteraction, db: Databa
   const query = interaction.options.getString('query', true);
   
   await interaction.deferReply({ ephemeral: true });
+  
+  // データ操作前の自動同期
+  const syncResult = await syncService.syncBeforeDataOperation();
+  if (!syncResult.success) {
+    logger.warn('同期に失敗しましたが、処理を続行します', { error: syncResult.message });
+  }
   
   const members = await db.searchMembers(query);
   
@@ -310,6 +323,34 @@ async function handleRegister(
 
   await db.insertMember(member, user.id);
   
+  // 編集後の自動シート更新（環境変数に関係なく実行）
+  try {
+    const sheetUpdateResult = await syncService.updateMemberToSheet({
+      discordId: user.id,
+      name: member.name,
+      discordDisplayName: member.discordDisplayName,
+      discordUsername: member.discordUsername,
+      studentId: member.studentId,
+      gender: member.gender,
+      team: member.team,
+      membershipFeeRecord: member.membershipFeeRecord,
+      grade: member.grade.toString()
+    });
+    
+    if (sheetUpdateResult.success) {
+      logger.info('部員登録後のシート更新成功', { memberName: member.name });
+    } else {
+      logger.warn('部員登録後のシート更新失敗', { 
+        memberName: member.name, 
+        error: sheetUpdateResult.message 
+      });
+    }
+  } catch (error) {
+    logger.error('部員登録後のシート更新でエラー', { 
+      memberName: member.name, 
+      error: error.message 
+    });
+  }
 
   const embed = new EmbedBuilder()
     .setColor('#00ff00')
@@ -371,6 +412,35 @@ async function handleUpdate(
     ...currentMember,
     ...updateValidation.data,
   };
+
+  // 編集後の自動シート更新（環境変数に関係なく実行）
+  try {
+    const sheetUpdateResult = await syncService.updateMemberToSheet({
+      discordId: user.id,
+      name: updatedMember.name,
+      discordDisplayName: updatedMember.discordDisplayName,
+      discordUsername: updatedMember.discordUsername,
+      studentId: updatedMember.studentId,
+      gender: updatedMember.gender,
+      team: updatedMember.team,
+      membershipFeeRecord: updatedMember.membershipFeeRecord,
+      grade: updatedMember.grade.toString()
+    });
+    
+    if (sheetUpdateResult.success) {
+      logger.info('部員更新後のシート更新成功', { memberName: updatedMember.name });
+    } else {
+      logger.warn('部員更新後のシート更新失敗', { 
+        memberName: updatedMember.name, 
+        error: sheetUpdateResult.message 
+      });
+    }
+  } catch (error) {
+    logger.error('部員更新後のシート更新でエラー', { 
+      memberName: updatedMember.name, 
+      error: error.message 
+    });
+  }
 
 
   const fieldNames: Record<string, string> = {
@@ -439,23 +509,52 @@ async function handleGradeUp(
     const currentGrade = typeof member.grade === 'number' ? member.grade : parseInt(String(member.grade));
     if (isNaN(currentGrade) || String(member.grade) === 'OB') continue;
 
-    let newGrade: number;
+    let newGradeStr: string;
+    let newGradeNum: number;
     if (currentGrade >= 4) {
-      // OBは文字列として扱うが、Memberのgradeは数値なので、大きな値で代用
-      newGrade = 99; // OBを表す特別な値
+      newGradeStr = 'OB';
+      newGradeNum = 99; // 内部的にOBを表す値
       newOB++;
     } else {
-      newGrade = currentGrade + 1;
+      newGradeNum = currentGrade + 1;
+      newGradeStr = newGradeNum.toString();
     }
 
-    await db.updateMember(dbMember.discord_id, { grade: newGrade.toString() });
+    await db.updateMember(dbMember.discord_id, { grade: newGradeStr });
 
     const updatedMember: Member = {
       ...member,
-      grade: newGrade,
+      grade: newGradeNum,
     };
 
-      updated++;
+    // 編集後の自動シート更新（環境変数に関係なく実行）
+    try {
+      const sheetUpdateResult = await syncService.updateMemberToSheet({
+        discordId: dbMember.discord_id,
+        name: updatedMember.name,
+        discordDisplayName: updatedMember.discordDisplayName,
+        discordUsername: updatedMember.discordUsername,
+        studentId: updatedMember.studentId,
+        gender: updatedMember.gender,
+        team: updatedMember.team,
+        membershipFeeRecord: updatedMember.membershipFeeRecord,
+        grade: newGradeStr
+      });
+      
+      if (!sheetUpdateResult.success) {
+        logger.warn('学年繰り上げ後のシート更新失敗', { 
+          memberName: updatedMember.name, 
+          error: sheetUpdateResult.message 
+        });
+      }
+    } catch (error) {
+      logger.error('学年繰り上げ後のシート更新でエラー', { 
+        memberName: updatedMember.name, 
+        error: error.message 
+      });
+    }
+
+    updated++;
   }
 
   embed

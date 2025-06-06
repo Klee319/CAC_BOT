@@ -168,68 +168,6 @@ export class NotificationService {
     }
   }
 
-  public async sendVoteReminders(): Promise<void> {
-    logger.info('投票期限リマインドをチェックします');
-
-    try {
-      const db = new DatabaseService();
-      await db.initialize();
-
-      const activeVotes = await db.getActiveVotes();
-      const config = configManager.getConfig();
-      const reminderHours = config.notifications.voteReminder.hoursBeforeDeadline;
-      
-      const now = new Date();
-      const reminderTime = new Date(now.getTime() + (reminderHours * 60 * 60 * 1000));
-
-      for (const vote of activeVotes) {
-        const deadline = new Date(vote.deadline);
-        
-        // 期限がリマインダー時間内にある投票を対象
-        if (deadline > now && deadline <= reminderTime) {
-          await this.sendNotification({
-            type: 'vote_reminder',
-            title: '🗳️ 投票期限リマインド',
-            message: `「${vote.title}」の投票期限が近づいています。`,
-            fields: [
-              {
-                name: '投票タイトル',
-                value: vote.title,
-                inline: false,
-              },
-              {
-                name: '期限',
-                value: `<t:${Math.floor(deadline.getTime() / 1000)}:F>`,
-                inline: true,
-              },
-              {
-                name: '残り時間',
-                value: `約${Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60))}時間`,
-                inline: true,
-              },
-              {
-                name: '参加方法',
-                value: `/vote response ${vote.id}`,
-                inline: false,
-              }
-            ],
-            embedColor: 0xff6600,
-          });
-
-          logger.info('投票期限リマインドを送信しました', {
-            voteId: vote.id,
-            title: vote.title,
-            deadline: deadline.toISOString(),
-          });
-        }
-      }
-
-      await db.close();
-
-    } catch (error) {
-      logger.error('投票期限リマインドに失敗しました', { error: (error as Error).message });
-    }
-  }
 
   private initializeScheduledNotifications(): void {
     const config = configManager.getConfig();
@@ -259,27 +197,6 @@ export class NotificationService {
       }
     }
 
-    // 投票リマインダーのスケジュール（1時間おき）
-    if (config.notifications.voteReminder.enabled) {
-      try {
-        const task = cron.schedule('0 * * * *', () => {
-          this.sendVoteReminders().catch(error => {
-            logger.error('スケジュールされた投票リマインドに失敗しました', { error: error.message });
-          });
-        }, {
-          scheduled: false,
-          timezone: 'Asia/Tokyo',
-        });
-
-        task.start();
-        this.scheduledJobs.set('voteReminder', task);
-        logger.info('投票リマインダーのスケジュールを設定しました');
-      } catch (error) {
-        logger.error('投票リマインダーのスケジュール設定に失敗しました', { 
-          error: (error as Error).message 
-        });
-      }
-    }
   }
 
   public updateSchedules(): void {
@@ -298,8 +215,6 @@ export class NotificationService {
     switch (type) {
       case 'fee_reminder':
         return 0xffaa00;
-      case 'vote_reminder':
-        return 0xff6600;
       case 'system':
         return 0x0099ff;
       case 'custom':

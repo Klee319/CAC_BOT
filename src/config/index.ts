@@ -25,10 +25,6 @@ const ConfigSchema = z.object({
       schedule: z.string(),
       channelId: z.string(),
     }),
-    voteReminder: z.object({
-      enabled: z.boolean(),
-      hoursBeforeDeadline: z.number(),
-    }),
     systemNotifications: z.object({
       channelId: z.string(),
     }),
@@ -38,7 +34,6 @@ const ConfigSchema = z.object({
     sheetName: z.string(),
   }),
   registration: z.object({
-    formUrl: z.string(),
     welcomeMessage: z.string(),
   }),
   database: z.object({

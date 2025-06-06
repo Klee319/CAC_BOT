@@ -7,11 +7,6 @@ export default {
   async execute(member: GuildMember) {
     try {
       const config = configManager.getConfig();
-      
-      if (!config.registration.formUrl) {
-        logger.warn('登録フォームURLが設定されていないため、自動登録案内をスキップします');
-        return;
-      }
 
       const welcomeEmbed = new EmbedBuilder()
         .setColor('#0099ff')
@@ -19,13 +14,8 @@ export default {
         .setDescription(config.registration.welcomeMessage)
         .addFields(
           {
-            name: '登録フォーム',
-            value: `[こちらから登録してください](${config.registration.formUrl})`,
-            inline: false,
-          },
-          {
             name: '注意事項',
-            value: '• 本名、学籍番号、性別は正確に入力してください\n• 登録完了後、管理者に通知されます\n• 不明な点があれば管理者にお問い合わせください',
+            value: '• 管理者による登録が必要です\n• 不明な点があれば管理者にお問い合わせください',
             inline: false,
           }
         )
@@ -36,7 +26,7 @@ export default {
 
       await member.send({ embeds: [welcomeEmbed] });
       
-      logger.info('新規メンバーに登録案内を送信しました', {
+      logger.info('新規メンバーに歓迎メッセージを送信しました', {
         userId: member.id,
         userName: member.user.username,
         displayName: member.displayName,

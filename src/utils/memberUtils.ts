@@ -52,7 +52,7 @@ export class MemberConverter {
   /**
    * スプレッドシートの行データを部員データに変換
    */
-  static rowToMember(row: (string | undefined)[], headers: string[]): Member | null {
+  static rowToMember(row: (string | undefined)[]): Member | null {
     try {
       const memberData = {
         name: row[0] || '',

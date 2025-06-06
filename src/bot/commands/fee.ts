@@ -5,6 +5,7 @@ import { GoogleSheetsService } from '../../services/google';
 import { MemberConverter, MemberFormatter } from '../../utils/memberUtils';
 import { logger } from '../../utils/logger';
 import { Member } from '../../types';
+import { syncService } from '../../services/sync';
 
 export default {
   data: new SlashCommandBuilder()
@@ -136,6 +137,12 @@ export default {
 };
 
 async function handleCheck(interaction: ChatInputCommandInteraction, db: DatabaseService) {
+  // データ操作前の自動同期
+  const syncResult = await syncService.syncBeforeDataOperation();
+  if (!syncResult.success) {
+    logger.warn('同期に失敗しましたが、処理を続行します', { error: syncResult.message });
+  }
+
   const dbMember = await db.getMemberByDiscordId(interaction.user.id);
   
   if (!dbMember) {
@@ -254,6 +261,35 @@ async function handleUpdate(
     membershipFeeRecord: record as '完納' | '未納' | '一部納入' | '免除',
   };
 
+  // 編集後の自動シート更新（環境変数に関係なく実行）
+  try {
+    const sheetUpdateResult = await syncService.updateMemberToSheet({
+      discordId: user.id,
+      name: updatedMember.name,
+      discordDisplayName: updatedMember.discordDisplayName,
+      discordUsername: updatedMember.discordUsername,
+      studentId: updatedMember.studentId,
+      gender: updatedMember.gender,
+      team: updatedMember.team,
+      membershipFeeRecord: updatedMember.membershipFeeRecord,
+      grade: updatedMember.grade.toString()
+    });
+    
+    if (sheetUpdateResult.success) {
+      logger.info('部費更新後のシート更新成功', { memberName: updatedMember.name });
+    } else {
+      logger.warn('部費更新後のシート更新失敗', { 
+        memberName: updatedMember.name, 
+        error: sheetUpdateResult.message 
+      });
+    }
+  } catch (error) {
+    logger.error('部費更新後のシート更新でエラー', { 
+      memberName: updatedMember.name, 
+      error: (error as Error).message 
+    });
+  }
+
   const embed = new EmbedBuilder()
     .setColor('#ffaa00')
     .setTitle('💰 部費記録更新完了')
@@ -280,6 +316,12 @@ async function handleUnpaid(interaction: ChatInputCommandInteraction, db: Databa
   const gradeFilter = interaction.options.getString('grade');
   const teamFilter = interaction.options.getString('team');
   const exportCsv = interaction.options.getBoolean('export') || false;
+
+  // データ操作前の自動同期
+  const syncResult = await syncService.syncBeforeDataOperation();
+  if (!syncResult.success) {
+    logger.warn('同期に失敗しましたが、処理を続行します', { error: syncResult.message });
+  }
 
   await interaction.deferReply({ ephemeral: true });
 
@@ -404,6 +446,12 @@ function generateCsv(members: any[]): string {
 
 async function handleStats(interaction: ChatInputCommandInteraction, db: DatabaseService) {
   await interaction.deferReply({ ephemeral: true });
+
+  // データ操作前の自動同期
+  const syncResult = await syncService.syncBeforeDataOperation();
+  if (!syncResult.success) {
+    logger.warn('同期に失敗しましたが、処理を続行します', { error: syncResult.message });
+  }
 
   try {
     const allMembers = await db.getAllMembers();

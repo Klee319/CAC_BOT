@@ -3,12 +3,11 @@
 ## 1. プロジェクト概要
 
 ### 1.1 目的
-部活動の運営管理を効率化するDiscord BOTシステムの構築。部員情報管理、部費管理、投票機能、各種記録機能を統合的に提供する。
+部活動の運営管理を効率化するDiscord BOTシステムの構築。部員情報管理、部費管理、各種記録機能を統合的に提供する。
 
 ### 1.2 主要機能
 - Google Sheetsと連携した部員データ管理
 - 部費納入状況の確認・管理
-- Google Forms連携による高度な投票・アンケート機能
 - 自動部員登録システム
 - リアルタイムデータ同期
 - 包括的な通知・ログシステム
@@ -151,50 +150,14 @@ interface Member {
 - 5分ごとの定期同期（差分チェック）
 - 手動同期コマンド: `/sync sheets`
 
-### 3.3 投票・アンケート機能
+### 3.3 通知機能
 
-#### 3.3.1 Google Forms連携フロー
-1. 管理者がGoogle Formsでアンケートを作成
-2. `/vote create`コマンドでフォームURLを指定
-3. BOTがForms APIで質問内容と形式を取得
-4. Discord用のインタラクティブフォームに自動変換
-5. 回答をGoogle Sheetsに保存
-
-#### 3.3.2 対応する質問形式
-- テキスト入力 → モーダルのテキスト入力
-- ラジオボタン → セレクトメニュー
-- チェックボックス → 複数選択可能なセレクトメニュー
-- プルダウン → セレクトメニュー
-- 画像添付 → Embed内に画像表示
-
-#### 3.3.3 投票作成モーダル
-```typescript
-interface VoteCreationModal {
-  formUrl: string;           // Google Forms URL
-  outputSheet?: string;      // 出力先URL（省略時はフォームと同じディレクトリ）
-  deadline: Date;           // 回答期限
-  allowEdit: boolean;       // 編集許可
-  anonymous: boolean;       // 匿名モード
-}
-```
-
-#### 3.3.4 コマンド仕様
-- `/vote create` - 新規投票作成（管理者）
-- `/vote edit` - 投票編集（管理者）
-- `/vote list` - 進行中の投票一覧
-- `/vote response` - 自分の回答確認・編集（部員）
-- `/vote close` - 投票終了（管理者）
-- `/vote results` - 結果確認（管理者）
-
-### 3.4 通知機能
-
-#### 3.4.1 通知種別
+#### 3.3.1 通知種別
 - 部費未納リマインド（月初自動送信）
-- アンケート期限通知（期限24時間前）
 - 重要なお知らせ（管理者手動送信）
 - システム通知（エラー、同期完了等）
 
-#### 3.4.2 通知設定（config.json）
+#### 3.3.2 通知設定（config.json）
 ```json
 {
   "notifications": {
@@ -203,14 +166,42 @@ interface VoteCreationModal {
       "schedule": "0 9 1 * *",  // 毎月1日9時
       "channelId": "CHANNEL_ID"
     },
-    "voteReminder": {
-      "enabled": true,
-      "hoursBeforeDeadline": 24
-    },
     "systemNotifications": {
       "channelId": "LOG_CHANNEL_ID"
     }
   }
+}
+```
+
+### 3.4 GoogleForm連携機能
+
+#### 3.4.1 機能概要
+管理者がGoogleフォームを作成・管理し、部員がフォームに回答できる機能を提供します。フォームの作成から期限管理、回答状況の確認まで一元管理できます。
+
+#### 3.4.2 データ構造
+```typescript
+interface GoogleForm {
+  id: string;                    // 内部管理ID
+  title: string;                 // フォームタイトル
+  description?: string;          // フォーム説明
+  googleFormId: string;          // Google FormsのID
+  googleFormUrl: string;         // Google FormsのURL
+  createdBy: string;            // 作成者のDiscord ID
+  createdAt: Date;              // 作成日時
+  deadline?: Date;              // 回答期限
+  state: 'draft' | 'published' | 'expired';  // フォーム状態
+  targetRoles: string[];        // 対象ロール（空の場合は全員）
+  isAnonymous: boolean;         // 匿名回答かどうか
+  maxResponses?: number;        // 最大回答数制限
+  updatedAt: Date;              // 最終更新日時
+}
+
+interface FormResponse {
+  id: string;                   // レスポンスID
+  formId: string;              // フォームID
+  responderId: string;         // 回答者のDiscord ID
+  responseData: any;           // Google Formsからの回答データ
+  submittedAt: Date;           // 回答日時
 }
 ```
 
@@ -260,9 +251,9 @@ interface Permissions {
 ```
 
 ### 4.3 コマンド権限
-- 管理者限定: sheet setup, member管理, member grade-up, vote create/edit/close, fee update, fee unpaid, member search
-- 部員: fee check, vote list/response
-- 全員: help, status
+- 管理者限定: sheet setup, member管理, member grade-up, fee update, fee unpaid, member search, form管理
+- 部員: fee check, form my
+- 全員: help, status, form list（制限付き）
 
 ## 5. エラーハンドリング
 
@@ -371,6 +362,7 @@ LOG_LEVEL=debug npm start
 
 ### 10.1 コマンド一覧
 
+
 #### 部員管理コマンド
 - `/member register` - 新規部員の手動登録（管理者のみ）
 - `/member update @user <field> <value>` - 部員情報の更新（管理者のみ）
@@ -390,13 +382,6 @@ LOG_LEVEL=debug npm start
   - record: 納入記録文字列（例: "2024年度納入済", "未納"）
 - `/fee unpaid` - 部費未納入者一覧の表示（管理者のみ）
 
-#### 投票・アンケートコマンド
-- `/vote create` - 新規投票の作成（管理者のみ）
-- `/vote edit <vote_id>` - 既存投票の編集（管理者のみ）
-- `/vote list` - 進行中の投票一覧
-- `/vote response <vote_id>` - 自分の回答確認・編集（部員）
-- `/vote close <vote_id>` - 投票の終了（管理者のみ）
-- `/vote results <vote_id>` - 投票結果の確認（管理者のみ）
 
 #### システム管理コマンド
 - `/sheet setup` - スプレッドシート連携設定（管理者のみ）
@@ -435,10 +420,6 @@ LOG_LEVEL=debug npm start
       "schedule": "0 9 1 * *",
       "channelId": "REMINDER_CHANNEL_ID"
     },
-    "voteReminder": {
-      "enabled": true,
-      "hoursBeforeDeadline": 24
-    },
     "systemNotifications": {
       "channelId": "LOG_CHANNEL_ID"
     }
@@ -457,7 +438,7 @@ LOG_LEVEL=debug npm start
 ### 10.3 API制限一覧
 - Discord API: 5リクエスト/秒
 - Google Sheets API: 100リクエスト/100秒
-- Google Forms API: 読み取りのみ、作成は手動
+- Google Forms API: 作成・読み取り・更新に対応、削除は手動
 
 ---
 

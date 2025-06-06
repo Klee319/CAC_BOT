@@ -6,7 +6,6 @@ import { DatabaseService } from './services/database';
 import { GoogleSheetsService } from './services/google';
 import { RegistrationService } from './services/registration';
 import { FeeManagementService } from './services/fee';
-import { VoteService } from './services/vote';
 import { SecurityService } from './services/security';
 import { notificationService } from './services/notification';
 import { syncService } from './services/sync';
@@ -20,7 +19,6 @@ class CACBot {
   private googleSheetsService: GoogleSheetsService;
   private registrationService: RegistrationService;
   private feeManagementService: FeeManagementService;
-  private voteService: VoteService;
   private securityService: SecurityService;
 
   constructor() {
@@ -44,7 +42,6 @@ class CACBot {
     this.googleSheetsService = new GoogleSheetsService();
     this.registrationService = new RegistrationService(this.googleSheetsService, this.databaseService);
     this.feeManagementService = new FeeManagementService(this.databaseService);
-    this.voteService = new VoteService(this.databaseService);
     this.securityService = new SecurityService(this.databaseService);
     this.setupEventHandlers();
   }
@@ -72,10 +69,6 @@ class CACBot {
         this.feeManagementService.startFeeReminder();
         logger.info('部費管理サービスが初期化されました');
         
-        // 投票サービスの初期化
-        this.voteService.setClient(this.client);
-        this.voteService.startVoteReminder();
-        logger.info('投票サービスが初期化されました');
         
         // セキュリティサービスの初期化
         this.securityService.setClient(this.client);
@@ -87,6 +80,7 @@ class CACBot {
         await syncService.performInitialSync();
         syncService.startPeriodicSync();
         logger.info('同期サービスが初期化されました');
+        
         
         await this.loadCommands();
         await this.loadEvents();
@@ -237,9 +231,6 @@ class CACBot {
       this.feeManagementService.stopFeeReminder();
       logger.info('部費管理サービスを停止しました');
       
-      // 投票サービスの停止
-      this.voteService.stopVoteReminder();
-      logger.info('投票サービスを停止しました');
       
       // セキュリティサービスの停止
       this.securityService.destroy();
@@ -248,6 +239,7 @@ class CACBot {
       // 同期サービスの停止
       syncService.stopPeriodicSync();
       logger.info('同期サービスを停止しました');
+      
       
       await this.databaseService.close();
       logger.info('データベース接続を閉じました');
@@ -290,13 +282,11 @@ class CACBot {
     return this.feeManagementService;
   }
 
-  public getVoteService(): VoteService {
-    return this.voteService;
-  }
 
   public getSecurityService(): SecurityService {
     return this.securityService;
   }
+
 }
 
 const bot = new CACBot();

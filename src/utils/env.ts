@@ -18,8 +18,7 @@ const EnvSchema = z.object({
   MEMBER_ROLE_ID: z.string().optional(),
   MEMBER_SPREADSHEET_ID: z.string().optional(),
   MEMBER_SHEET_NAME: z.string().default('部員名簿'),
-  REGISTRATION_FORM_URL: z.string().url().optional().or(z.literal('')),
-  WELCOME_MESSAGE: z.string().default('ようこそ！以下のフォームから部員登録をお願いします。'),
+  WELCOME_MESSAGE: z.string().default('ようこそ！'),
 });
 
 function validateEnv(): z.infer<typeof EnvSchema> {

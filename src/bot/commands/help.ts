@@ -32,12 +32,6 @@ export default {
         value: '`/fee check` - 自分の部費納入状況を確認',
         inline: false,
       });
-
-      embed.addFields({
-        name: '🗳️ 投票・アンケート（部員用）',
-        value: '`/vote list` - 進行中の投票一覧\n`/vote response` - 自分の回答を確認・編集',
-        inline: false,
-      });
     }
 
     if (isAdmin) {
@@ -63,16 +57,6 @@ export default {
         inline: false,
       });
 
-      embed.addFields({
-        name: '🗳️ 投票・アンケート（管理者専用）',
-        value: [
-          '`/vote create` - 新規投票の作成',
-          '`/vote edit` - 既存投票の編集',
-          '`/vote close` - 投票の終了',
-          '`/vote results` - 投票結果の確認'
-        ].join('\n'),
-        inline: false,
-      });
 
       embed.addFields({
         name: '⚙️ システム管理（管理者専用）',

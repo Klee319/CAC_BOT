@@ -11,7 +11,7 @@ export interface RegistrationCandidate {
   member: Member;
   timestamp: Date;
   discordId?: string;
-  source: 'form' | 'manual';
+  source: 'manual';
 }
 
 export class RegistrationService {
@@ -87,7 +87,7 @@ export class RegistrationService {
             const candidate: RegistrationCandidate = {
               member,
               timestamp: new Date(),
-              source: 'form'
+              source: 'manual'
             };
 
             // Discord上でユーザーを検索

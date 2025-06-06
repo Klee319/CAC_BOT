@@ -200,7 +200,9 @@ export async function validateAdvancedPermissions(
 
 export function getUserRoles(interaction: ChatInputCommandInteraction): string[] {
   const member = interaction.member as GuildMember;
-  if (!member) return [];
+  if (!member) {
+    return [];
+  }
   
   return member.roles.cache.map(role => role.id);
 }

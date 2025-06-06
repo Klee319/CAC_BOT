@@ -6,11 +6,13 @@ import { Member, GoogleSheetsRow, MemberSchema } from '../../types';
 
 export class GoogleSheetsService {
   private sheets: sheets_v4.Sheets;
+  private drive: any;
   private auth: any;
 
   constructor() {
     this.initializeAuth();
     this.sheets = google.sheets({ version: 'v4', auth: this.auth });
+    this.drive = google.drive({ version: 'v3', auth: this.auth });
     
     // 環境変数の状態をデバッグログ出力
     logger.warn('GoogleSheetsService初期化 - 保護設定確認', {
@@ -141,10 +143,9 @@ export class GoogleSheetsService {
       
       const rows = await this.readSheet(config.sheets.spreadsheetId, range);
       
-      logger.warn('スプレッドシートデータ取得結果', { 
+      logger.debug('スプレッドシートデータ取得結果', { 
         rowCount: rows.length,
-        firstRowSample: rows.length > 0 ? rows[0] : null,
-        allRows: rows
+        firstRowSample: rows.length > 0 ? rows[0] : null
       });
       
       if (rows.length === 0) {
@@ -152,12 +153,7 @@ export class GoogleSheetsService {
         return [];
       }
 
-      // ヘッダーを別途取得
-      const headerRange = `${config.sheets.sheetName}!A1:H1`;
-      const headerRows = await this.readSheet(config.sheets.spreadsheetId, headerRange);
-      const headers = headerRows[0] || [];
-
-      return rows.map(row => this.rowToMember(row || [], headers));
+      return rows.map(row => this.rowToMember(row || []));
     } catch (error) {
       logger.error('全部員データの取得に失敗しました', { error: error.message });
       throw error;
@@ -285,7 +281,37 @@ export class GoogleSheetsService {
     }
   }
 
-  public async batchSyncMembers(members: Member[], batchSize: number = 10): Promise<void> {
+  /**
+   * 特定のメンバーをスプレッドシートに更新（環境変数に関係なく強制実行）
+   */
+  public async updateMemberInSheet(member: Member): Promise<void> {
+    logger.info('編集コマンドによる強制シート更新', { 
+      memberName: member.name,
+      protectSetting: process.env.PROTECT_SPREADSHEET
+    });
+    
+    try {
+      const rowIndex = await this.findMemberRow(member);
+      
+      if (rowIndex !== null) {
+        logger.info('既存の行を強制更新', { memberName: member.name, rowIndex });
+        await this.updateMember(member, rowIndex);
+      } else {
+        logger.info('新規行を強制追加', { memberName: member.name });
+        await this.addMember(member);
+      }
+      
+      logger.info('編集後のシート更新が完了しました', { name: member.name });
+    } catch (error) {
+      logger.error('編集後のシート更新に失敗しました', { 
+        error: error.message, 
+        memberName: member.name 
+      });
+      throw error;
+    }
+  }
+
+  public async batchSyncMembers(members: Member[], batchSize: number = 5): Promise<void> {
     logger.info('部員データの一括同期を開始します', { count: members.length });
     
     // スプレッドシート書き込み保護
@@ -294,35 +320,61 @@ export class GoogleSheetsService {
       return;
     }
     
+    // メモリ使用量の事前チェック
+    const initialMemUsage = process.memoryUsage();
+    if (initialMemUsage.heapUsed > 1024 * 1024 * 1024) { // 1GB以上
+      logger.warn('メモリ使用量が高いため、バッチサイズを減らします', {
+        heapUsed: `${Math.round(initialMemUsage.heapUsed / 1024 / 1024)}MB`
+      });
+      batchSize = 3; // バッチサイズをさらに減らす
+    }
+    
     // バッチ処理でメモリ効率を改善
     for (let i = 0; i < members.length; i += batchSize) {
       const batch = members.slice(i, i + batchSize);
-      const batchPromises = batch.map(async (member) => {
+      
+      // 順次処理に変更してメモリ使用量を抑制
+      for (const member of batch) {
         try {
           await this.syncMemberToSheets(member);
+          
+          // メモリ使用量が高い場合の緩和処理
+          const currentMemUsage = process.memoryUsage();
+          if (currentMemUsage.heapUsed > 1536 * 1024 * 1024) { // 1.5GB以上
+            logger.warn('メモリ使用量が臨界値に達したため、ガベージコレクションを実行', {
+              heapUsed: `${Math.round(currentMemUsage.heapUsed / 1024 / 1024)}MB`
+            });
+            global.gc && global.gc(); // ガベージコレクションを強制実行
+            await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
+          }
+          
         } catch (error) {
           logger.error('部員データの同期でエラーが発生しました', { 
             memberName: member.name, 
             error: error.message 
           });
         }
-      });
+        
+        // 各メンバー処理後に小さな待機時間
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
       
-      await Promise.all(batchPromises);
-      
-      // バッチ間で短い待機時間を設定（API制限対策）
+      // バッチ間で長い待機時間を設定（API制限対策）
       if (i + batchSize < members.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1秒待機
       }
       
       // メモリ使用量ログ
       const memUsage = process.memoryUsage();
-      logger.debug('メモリ使用状況', {
+      logger.info('メモリ使用状況', {
         heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
         heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
         progress: `${Math.min(i + batchSize, members.length)}/${members.length}`
       });
     }
+    
+    // 最後にメモリクリーンアップ
+    global.gc && global.gc();
     
     logger.info('部員データの一括同期が完了しました');
   }
@@ -340,8 +392,8 @@ export class GoogleSheetsService {
     ];
   }
 
-  private rowToMember(row: string[], headers: string[]): Member {
-    logger.warn('rowToMember変換', { 
+  private rowToMember(row: string[]): Member {
+    logger.debug('rowToMember変換', { 
       rawRow: row,
       rowLength: row.length 
     });
@@ -357,7 +409,7 @@ export class GoogleSheetsService {
       grade: row[7] || '1',
     };
     
-    logger.warn('変換後のメンバーデータ', { memberData });
+    logger.debug('変換後のメンバーデータ', { memberData });
 
     // バリデーションを通してから返す
     const validation = MemberSchema.safeParse(memberData);
@@ -428,4 +480,118 @@ export class GoogleSheetsService {
       throw error;
     }
   }
+
+  /**
+   * スプレッドシートの最終更新日時を取得
+   */
+  public async getSpreadsheetLastModified(spreadsheetId: string): Promise<Date | null> {
+    try {
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId,
+        fields: 'properties.title,sheets.properties.title'
+      });
+
+      // Google Drive APIを使用してより正確な最終更新日時を取得
+      const drive = google.drive({ version: 'v3', auth: this.auth });
+      const fileResponse = await drive.files.get({
+        fileId: spreadsheetId,
+        fields: 'modifiedTime,version'
+      });
+
+      if (fileResponse.data.modifiedTime) {
+        const lastModified = new Date(fileResponse.data.modifiedTime);
+        logger.debug('スプレッドシート最終更新日時を取得', { 
+          spreadsheetId: spreadsheetId.substring(0, 10) + '...', 
+          lastModified: lastModified.toISOString(),
+          version: fileResponse.data.version
+        });
+        return lastModified;
+      }
+
+      return null;
+    } catch (error) {
+      logger.error('スプレッドシート最終更新日時の取得に失敗', { error: error.message });
+      return null;
+    }
+  }
+
+  /**
+   * 範囲指定でスプレッドシートデータと最終更新日時を取得
+   */
+  public async getSheetDataWithMetadata(spreadsheetId: string, range: string): Promise<{
+    data: any[][];
+    lastModified: Date | null;
+  }> {
+    try {
+      const [sheetData, lastModified] = await Promise.all([
+        this.readSheet(spreadsheetId, range),
+        this.getSpreadsheetLastModified(spreadsheetId)
+      ]);
+
+      return {
+        data: sheetData,
+        lastModified
+      };
+    } catch (error) {
+      logger.error('スプレッドシートデータとメタデータの取得に失敗', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * 最適化された部員データ取得（最終更新日時チェック付き）
+   */
+  public async getAllMembersWithMetadata(): Promise<{
+    members: Member[];
+    lastModified: Date | null;
+    needsSync: boolean;
+  }> {
+    const config = configManager.getConfig();
+    if (!config.sheets.spreadsheetId) {
+      throw new Error('スプレッドシートIDが設定されていません');
+    }
+
+    try {
+      const range = `${config.sheets.sheetName}!A:H`;
+      const result = await this.getSheetDataWithMetadata(config.sheets.spreadsheetId, range);
+      
+      if (result.data.length === 0) {
+        return { members: [], lastModified: result.lastModified, needsSync: false };
+      }
+
+      const dataRows = result.data.slice(1); // ヘッダーを除く
+      const members: Member[] = [];
+
+      for (const row of dataRows) {
+        if (row && row.length > 0 && row[0]) { // 名前が空でない行のみ処理
+          try {
+            const member = this.rowToMember(row);
+            if (member) {
+              members.push(member);
+            }
+          } catch (error) {
+            logger.warn('部員データの変換をスキップ', { row, error: error.message });
+          }
+        }
+      }
+
+      logger.info('スプレッドシートから部員データを取得', { 
+        count: members.length,
+        lastModified: result.lastModified?.toISOString(),
+        totalRows: result.data.length 
+      });
+
+      return { 
+        members, 
+        lastModified: result.lastModified, 
+        needsSync: true // この段階では常にtrueで、呼び出し側で判定
+      };
+    } catch (error) {
+      logger.error('最適化された部員データ取得に失敗', { error: error.message });
+      throw error;
+    }
+  }
+
+
+
 }

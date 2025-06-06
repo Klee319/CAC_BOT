@@ -24,10 +24,6 @@
       "schedule": "0 9 1 * *",
       "channelId": "1168376137337020437"
     },
-    "voteReminder": {
-      "enabled": true,
-      "hoursBeforeDeadline": 24
-    },
     "systemNotifications": {
       "channelId": "1168376137337020437"
     }
@@ -37,8 +33,7 @@
     "sheetName": "test_members"
   },
   "registration": {
-    "formUrl": "https://docs.google.com/forms/d/1dhF9G4FkY-nPkWqac9BIR4lgqXu71ZWgddJSFyH5tnc/edit",
-    "welcomeMessage": "ようこそ！以下のフォームから部員登録をお願いします。"
+    "welcomeMessage": "ようこそ！"
   },
   "database": {
     "path": "./database/cac_bot.db",

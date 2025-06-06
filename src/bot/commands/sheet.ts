@@ -436,10 +436,16 @@ async function handleSyncStatus(interaction: ChatInputCommandInteraction) {
     }
     
     const status = syncService.getSyncStatus();
+    
+    // 最新の同期メタデータを取得
+    const db = new DatabaseService();
+    await db.initialize();
+    const lastSyncMeta = await db.getLastSyncMetadata('sheet-to-db');
+    await db.close();
   
   const embed = new EmbedBuilder()
     .setColor(status.isRunning ? "#ffaa00" : "#0099ff")
-    .setTitle("🔄 自動同期ステータス")
+    .setTitle("🔄 自動同期ステータス（最適化版）")
     .setDescription(status.isRunning ? "同期処理実行中..." : "待機中")
     .addFields(
       {
@@ -459,8 +465,36 @@ async function handleSyncStatus(interaction: ChatInputCommandInteraction) {
           : "未実行",
         inline: true,
       }
-    )
-    .setFooter({ text: "同期方向: スプレッドシート → データベース" })
+    );
+
+  // 同期パフォーマンス情報を追加
+  if (lastSyncMeta) {
+    const perfText = [
+      `状態: ${lastSyncMeta.status}`,
+      `処理時間: ${lastSyncMeta.sync_duration}ms`,
+      `処理件数: ${lastSyncMeta.records_processed}件`,
+      `更新: ${lastSyncMeta.records_updated}件`,
+      `スキップ: ${lastSyncMeta.records_skipped}件`
+    ].join('\n');
+
+    embed.addFields({
+      name: "📊 最新同期結果",
+      value: "```\n" + perfText + "\n```",
+      inline: false,
+    });
+
+    if (lastSyncMeta.sheet_last_modified) {
+      const sheetModified = new Date(lastSyncMeta.sheet_last_modified);
+      embed.addFields({
+        name: "📄 シート最終更新",
+        value: `<t:${Math.floor(sheetModified.getTime() / 1000)}:R>`,
+        inline: true,
+      });
+    }
+  }
+
+  embed
+    .setFooter({ text: "同期方向: スプレッドシート → データベース | タイムスタンプ最適化: 有効" })
     .setTimestamp();
 
   // 環境変数の状態も表示

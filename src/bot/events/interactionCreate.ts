@@ -15,7 +15,10 @@ async function loadCommands() {
   }
 
   const commandFiles = fs.readdirSync(commandsPath).filter(file => 
-    (file.endsWith('.js') || file.endsWith('.ts')) && !file.endsWith('.d.ts')
+    (file.endsWith('.js') || file.endsWith('.ts')) && 
+    !file.endsWith('.d.ts') &&
+    !file.includes('form') &&
+    !file.includes('survey')
   );
 
   for (const file of commandFiles) {
@@ -73,6 +76,10 @@ export default {
       await handleCommand(interaction);
     } else if (interaction.isModalSubmit()) {
       await handleModal(interaction);
+    } else if (interaction.isButton()) {
+      await handleButton(interaction);
+    } else if (interaction.isStringSelectMenu()) {
+      await handleSelectMenu(interaction);
     }
   },
 };
@@ -161,7 +168,10 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleModal(interaction: any) {
-  const modal = modals.get(interaction.customId);
+  // 動的customIdに対応
+  let modalKey = interaction.customId;
+  let modal = modals.get(modalKey);
+
   if (!modal) {
     logger.warn(`不明なモーダル: ${interaction.customId}`);
     return;
@@ -198,3 +208,54 @@ async function handleModal(interaction: any) {
     }
   }
 }
+
+async function handleButton(interaction: any) {
+  try {
+    logger.warn(`未処理のボタンインタラクション: ${interaction.customId}`);
+  } catch (error) {
+    logger.error(`ボタン処理エラー: ${interaction.customId}`, {
+      error: error.message,
+      userId: interaction.user.id,
+    });
+
+    const errorMessage = 'ボタン処理中にエラーが発生しました。';
+    
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({
+        content: errorMessage,
+        ephemeral: true,
+      });
+    } else {
+      await interaction.reply({
+        content: errorMessage,
+        ephemeral: true,
+      });
+    }
+  }
+}
+
+async function handleSelectMenu(interaction: any) {
+  try {
+    logger.warn(`未処理のセレクトメニュー: ${interaction.customId}`);
+  } catch (error) {
+    logger.error(`セレクトメニュー処理エラー: ${interaction.customId}`, {
+      error: error.message,
+      userId: interaction.user.id,
+    });
+
+    const errorMessage = 'セレクトメニュー処理中にエラーが発生しました。';
+    
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({
+        content: errorMessage,
+        ephemeral: true,
+      });
+    } else {
+      await interaction.reply({
+        content: errorMessage,
+        ephemeral: true,
+      });
+    }
+  }
+}
+

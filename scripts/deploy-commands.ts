@@ -8,20 +8,18 @@ const commands = [];
 // コマンドファイルを読み込み
 const commandsPath = path.join(__dirname, '..', 'src', 'bot', 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => 
-  (file.endsWith('.js') || file.endsWith('.ts')) && !file.endsWith('.d.ts')
+  (file.endsWith('.js') || file.endsWith('.ts')) && 
+  !file.endsWith('.d.ts') &&
+  !file.includes('form') &&
+  !file.includes('survey')
 );
 
 async function loadCommands() {
   for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     try {
-      // TypeScriptファイルの場合、ビルド後のJSファイルを参照
-      const commandPath = file.endsWith('.ts') 
-        ? filePath.replace('/src/', '/dist/').replace('.ts', '.js')
-        : filePath;
-      
-      const command = require(commandPath);
-      const commandData = command.default || command;
+      const commandModule = await import(filePath);
+      const commandData = commandModule.default || commandModule;
       
       if (commandData && commandData.data) {
         commands.push(commandData.data.toJSON());
