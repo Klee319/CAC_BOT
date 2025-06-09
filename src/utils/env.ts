@@ -19,6 +19,8 @@ const EnvSchema = z.object({
   MEMBER_SPREADSHEET_ID: z.string().optional(),
   MEMBER_SHEET_NAME: z.string().default('部員名簿'),
   WELCOME_MESSAGE: z.string().default('ようこそ！'),
+  JWT_SECRET: z.string().default('your-secret-key-here'),
+  AUTH_SERVER_URL: z.string().default('http://localhost:3001'),
 });
 
 function validateEnv(): z.infer<typeof EnvSchema> {

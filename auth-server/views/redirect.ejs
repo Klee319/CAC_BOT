@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .success-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #27ae60;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 16px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .user-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .user-info h3 {
+            margin: 0 0 12px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        .user-info p {
+            margin: 4px 0;
+            color: #34495e;
+            font-size: 14px;
+        }
+        .redirect-message {
+            color: #7f8c8d;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .form-button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.2s;
+            margin: 10px;
+        }
+        .form-button:hover {
+            background: #2ecc71;
+        }
+        .manual-link {
+            color: #3498db;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .manual-link:hover {
+            text-decoration: underline;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✅</div>
+        <h1>認証成功</h1>
+        
+        <div class="user-info">
+            <h3>📋 自動入力される情報</h3>
+            <p><strong>名前:</strong> <%= memberName %></p>
+            <p><strong>学籍番号:</strong> <%= studentId %></p>
+            <p><strong>Discord経由:</strong> 認証済み</p>
+        </div>
+        
+        <div class="redirect-message">
+            認証が成功しました。Google Formsに自動でリダイレクトします。<br>
+            自動でリダイレクトされない場合は、下のボタンをクリックしてください。
+        </div>
+        
+        <div class="spinner"></div>
+        
+        <a href="<%= formUrl %>" class="form-button" target="_self">
+            📝 フォームに移動
+        </a>
+        
+        <br><br>
+        <a href="<%= formUrl %>" class="manual-link" target="_blank">
+            新しいタブで開く
+        </a>
+    </div>
+
+    <script>
+        // 3秒後に自動リダイレクト
+        setTimeout(function() {
+            window.location.href = '<%= formUrl %>';
+        }, 3000);
+        
+        // リダイレクト後、このウィンドウを閉じる（ポップアップの場合）
+        setTimeout(function() {
+            if (window.opener) {
+                window.close();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

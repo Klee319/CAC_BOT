@@ -247,3 +247,10 @@ export async function logSecurityEvent(
   // 従来のログも継続
   logCommandUsage(interaction, `${type}:${result}`, undefined, result);
 }
+
+export function hasAdminRole(member: GuildMember | any): boolean {
+  if (!member) return false;
+  
+  const userRoles = member.roles?.cache?.map(role => role.id) || [];
+  return configManager.isAdmin(userRoles);
+}

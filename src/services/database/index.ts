@@ -6,11 +6,20 @@ import { logger } from '../../utils/logger';
 import { Member, AuditLog, DatabaseSchema } from '../../types';
 
 export class DatabaseService {
+  private static instance: DatabaseService | null = null;
   private db: sqlite3.Database | null = null;
   private dbPath: string;
 
   constructor() {
     this.dbPath = env.DATABASE_PATH;
+  }
+
+  public static async getInstance(): Promise<DatabaseService> {
+    if (!DatabaseService.instance) {
+      DatabaseService.instance = new DatabaseService();
+      await DatabaseService.instance.initialize();
+    }
+    return DatabaseService.instance;
   }
 
   public async initialize(): Promise<void> {
@@ -605,5 +614,66 @@ export class DatabaseService {
         });
       });
     }
+  }
+
+  // フォーム関連のメソッド（スタブ実装）
+  public async createForm(form: any): Promise<any> {
+    logger.warn('createForm メソッドは未実装です');
+    return { ...form, id: Date.now().toString() };
+  }
+
+  public async getFormById(id: string): Promise<any | null> {
+    logger.warn('getFormById メソッドは未実装です');
+    return null;
+  }
+
+  public async updateFormState(id: string, state: string): Promise<void> {
+    logger.warn('updateFormState メソッドは未実装です');
+  }
+
+  public async deleteForm(id: string): Promise<void> {
+    logger.warn('deleteForm メソッドは未実装です');
+  }
+
+  public async updateForm(id: string, updates: any): Promise<void> {
+    logger.warn('updateForm メソッドは未実装です');
+  }
+
+  public async getActiveForms(userId?: string): Promise<any[]> {
+    logger.warn('getActiveForms メソッドは未実装です');
+    return [];
+  }
+
+  public async getAllForms(): Promise<any[]> {
+    logger.warn('getAllForms メソッドは未実装です');
+    return [];
+  }
+
+  public async hasUserResponded(formId: string, userId: string): Promise<boolean> {
+    logger.warn('hasUserResponded メソッドは未実装です');
+    return false;
+  }
+
+  public async getFormResponses(formId: string): Promise<any[]> {
+    logger.warn('getFormResponses メソッドは未実装です');
+    return [];
+  }
+
+  public async setFormMessage(formId: string, messageId: string, channelId: string): Promise<void> {
+    logger.warn('setFormMessage メソッドは未実装です');
+  }
+
+  public async getExpiredForms(): Promise<any[]> {
+    logger.warn('getExpiredForms メソッドは未実装です');
+    return [];
+  }
+
+  public async recordFormResponse(data: any): Promise<void> {
+    logger.warn('recordFormResponse メソッドは未実装です');
+  }
+
+  public async isTokenUsed(token: string): Promise<boolean> {
+    logger.warn('isTokenUsed メソッドは未実装です');
+    return false;
   }
 }
